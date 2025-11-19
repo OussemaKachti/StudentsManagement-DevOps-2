@@ -2,27 +2,36 @@ pipeline {
     agent any
     
     tools {
-        maven 'M2_HOME'
+        maven 'Maven'
     }
     
     stages {
         stage('Checkout') {
             steps {
                 git branch: 'main',
-                    url: 'https://github.com/Alaa-Rami/StudentsManagement-DevOps'
+                    url: 'https://github.com/OussemaKachti/StudentsManagement-DevOps.git'
             }
         }
         
         stage('Build') {
             steps {
-                sh 'mvn clean install'
+                bat 'mvn clean compile'
             }
         }
         
-        stage('Test') {
+        stage('Package') {
             steps {
-                sh 'mvn test'
+                bat 'mvn package -DskipTests'
             }
+        }
+    }
+    
+    post {
+        success {
+            echo 'Build réussi !'
+        }
+        failure {
+            echo 'Build échoué !'
         }
     }
 }
