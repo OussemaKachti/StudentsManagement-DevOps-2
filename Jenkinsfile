@@ -10,11 +10,9 @@ pipeline {
     }
 
     stages {
-
         stage('Checkout') {
             steps {
-                echo '📥 Fetching code from PRIVATE GitHub repository...'
-
+                echo '📥 Fetching code from GitHub...'
                 checkout([
                     $class: 'GitSCM',
                     branches: [[name: 'main']],
@@ -33,6 +31,19 @@ pipeline {
             }
         }
 
+        stage('Test') {
+            steps {
+                echo '🧪 Running unit tests...'
+                sh 'mvn test'
+            }
+            post {
+                always {
+                    junit '**/target/surefire-reports/*.xml'
+                    jacoco execPattern: '**/target/jacoco.exec'
+                }
+            }
+        }
+
         stage('Package') {
             steps {
                 echo '📦 Packaging JAR...'
@@ -43,7 +54,7 @@ pipeline {
 
     post {
         success {
-            echo '✅ Build successful! Artifact generated.'
+            echo '✅ Build successful!'
             archiveArtifacts artifacts: 'target/*.jar', fingerprint: true, allowEmptyArchive: true
         }
         failure {
