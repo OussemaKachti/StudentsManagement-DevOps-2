@@ -4,42 +4,50 @@ pipeline {
     triggers {
         githubPush()
     }
-    
+
     tools {
         maven 'M2_HOME'
     }
-    
+
     stages {
+
         stage('Checkout') {
             steps {
-                echo 'Récupération du code source depuis Git...'
-                git branch: 'main',
-                    url: 'https://github.com/OussemaKachti/StudentsManagement-DevOps.git'
+                echo '📥 Fetching code from PRIVATE GitHub repository...'
+
+                checkout([
+                    $class: 'GitSCM',
+                    branches: [[name: 'main']],
+                    userRemoteConfigs: [[
+                        url: 'https://github.com/OussemaKachti/StudentsManagement-DevOps-2.git',
+                        credentialsId: 'github-credentials'
+                    ]]
+                ])
             }
         }
-        
+
         stage('Build') {
             steps {
-                echo 'Compilation du projet...'
+                echo '🔨 Compiling project...'
                 sh 'mvn clean compile'
             }
         }
-        
+
         stage('Package') {
             steps {
-                echo 'Création du package JAR...'
+                echo '📦 Packaging JAR...'
                 sh 'mvn package -DskipTests'
             }
         }
     }
-    
+
     post {
         success {
-            echo '✅ Build réussi ! Le projet a été compilé et packagé avec succès.'
+            echo '✅ Build successful! Artifact generated.'
             archiveArtifacts artifacts: 'target/*.jar', fingerprint: true, allowEmptyArchive: true
         }
         failure {
-            echo '❌ Build échoué ! Consultez les logs pour plus de détails.'
+            echo '❌ Build failed! Check logs.'
         }
     }
 }
