@@ -4,6 +4,9 @@ pipeline {
     environment {
         DOCKER_IMAGE = 'oussema17/students-management'
         DOCKER_CREDS = credentials('dockerhub-credentials')
+        NEXUS_CREDS = credentials('nexus-credentials')
+        NEXUS_USER = "${NEXUS_CREDS_USR}"
+        NEXUS_PASS = "${NEXUS_CREDS_PSW}"
     }
 
     triggers {
@@ -56,6 +59,13 @@ pipeline {
             }
         }
 
+        stage('Deploy to Nexus') {
+            steps {
+                echo '📤 Deploying artifacts to Nexus...'
+                sh 'mvn deploy -DskipTests -s maven-settings.xml'
+            }
+        }
+
         stage('Docker Build') {
             steps {
                 echo '🐳 Building Docker Image...'
@@ -87,7 +97,7 @@ pipeline {
 
     post {
         success {
-            echo '✅ Pipeline successful! Image pushed to DockerHub.'
+            echo '✅ Pipeline successful! Artifacts deployed to Nexus and Docker image pushed.'
             archiveArtifacts artifacts: 'target/*.jar', fingerprint: true, allowEmptyArchive: true
         }
         failure {
