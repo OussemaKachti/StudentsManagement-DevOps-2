@@ -1,5 +1,4 @@
-# On part d'une image légère avec Java 17 (ou 11 selon votre projet)
-FROM openjdk:17-jdk-alpine
+FROM eclipse-temurin:17-jdk-alpine
 
 # On ajoute un volume pour les fichiers temporaires
 VOLUME /tmp
