@@ -59,10 +59,10 @@ pipeline {
             }
         }
 
-        stage('Deploy to Nexus') {
+       stage('Deploy to Nexus') {
             steps {
                 echo '📤 Deploying artifacts to Nexus...'
-                sh 'mvn deploy -DskipTests -s maven-settings.xml'
+                sh 'mvn deploy -DskipTests -Djacoco.skip=true -s maven-settings.xml'
             }
         }
 
