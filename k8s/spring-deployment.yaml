@@ -1,0 +1,36 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: students-management
+  namespace: devops
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: students-management
+  template:
+    metadata:
+      labels:
+        app: students-management
+    spec:
+      containers:
+      - name: students-management
+        image: oussema17/students-management:latest
+        ports:
+        - containerPort: 8080
+        env:
+        - name: SPRING_DATASOURCE_URL
+          valueFrom:
+            configMapKeyRef:
+              name: spring-config
+              key: SPRING_DATASOURCE_URL
+        - name: SPRING_DATASOURCE_USERNAME
+          valueFrom:
+            configMapKeyRef:
+              name: spring-config
+              key: SPRING_DATASOURCE_USERNAME
+        - name: SPRING_DATASOURCE_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: spring-secret
+              key: MYSQL_PASSWORD
