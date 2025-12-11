@@ -60,7 +60,7 @@ pipeline {
         stage('SonarQube Analysis') {
     steps {
         echo '🔍 Running SonarQube Code Quality Analysis...'
-        withSonarQubeEnv('sonar-server') {
+        withSonarQubeEnv('SonarQube') {
             sh """
                 mvn verify sonar:sonar \
                 -Dsonar.projectKey=student-management \
