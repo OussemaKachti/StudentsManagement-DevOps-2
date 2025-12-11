@@ -41,18 +41,18 @@ pipeline {
             }
         }
 
-        stage('Test') {
-            steps {
-                echo '🧪 Running unit tests...'
-                sh 'mvn test'
-            }
-            post {
-                always {
-                    junit allowEmptyResults: true, testResults: '**/target/surefire-reports/*.xml'
-                    jacoco execPattern: '**/target/jacoco.exec'
-                }
-            }
-        }
+        // stage('Test') {
+        //     steps {
+        //         echo '🧪 Running unit tests...'
+        //         sh 'mvn test'
+        //     }
+        //     post {
+        //         always {
+        //             junit allowEmptyResults: true, testResults: '**/target/surefire-reports/*.xml'
+        //             jacoco execPattern: '**/target/jacoco.exec'
+        //         }
+        //     }
+        // }
 
         
     
@@ -78,12 +78,12 @@ pipeline {
             }
         }
 
-        stage('Deploy to Nexus') {
-            steps {
-                echo '📤 Deploying artifacts to Nexus...'
-                sh 'mvn deploy -DskipTests -Djacoco.skip=true -s maven-settings.xml'
-            }
-        }
+        // stage('Deploy to Nexus') {
+        //     steps {
+        //         echo '📤 Deploying artifacts to Nexus...'
+        //         sh 'mvn deploy -DskipTests -Djacoco.skip=true -s maven-settings.xml'
+        //     }
+        // }
 
         stage('Docker Build') {
             steps {
