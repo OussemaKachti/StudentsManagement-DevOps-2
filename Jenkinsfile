@@ -5,10 +5,6 @@ pipeline {
         DOCKER_IMAGE = 'oussema17/students-management'
         DOCKER_CREDS = credentials('dockerhub-credentials')
         NEXUS_CREDS = credentials('nexus-credentials')
-        NEXUS_USER = "${NEXUS_CREDS_USR}"
-        NEXUS_PASS = "${NEXUS_CREDS_PSW}"
-            SONARQUBE_TOKEN = credentials('sonarqube-token')
-
     }
 
     triggers {
@@ -41,32 +37,33 @@ pipeline {
             }
         }
 
-        // stage('Test') {
-        //     steps {
-        //         echo '🧪 Running unit tests...'
-        //         sh 'mvn test'
-        //     }
-        //     post {
-        //         always {
-        //             junit allowEmptyResults: true, testResults: '**/target/surefire-reports/*.xml'
-        //             jacoco execPattern: '**/target/jacoco.exec'
-        //         }
-        //     }
-        // }
-
-        
-    
+        stage('Test') {
+            steps {
+                echo '🧪 Running unit tests...'
+                sh 'mvn test'
+            }
+            post {
+                always {
+                    junit allowEmptyResults: true, testResults: '**/target/surefire-reports/*.xml'
+                    jacoco execPattern: '**/target/jacoco.exec'
+                }
+            }
+        }
 
         stage('SonarQube Analysis') {
             steps {
                 echo '🔍 Running SonarQube Code Quality Analysis...'
                 withSonarQubeEnv('SonarQube') {
-                    sh '''
-                        mvn sonar:sonar \
-                        -Dsonar.projectKey=student-management \
-                        -Dsonar.host.url=http://192.168.33.10:9000 \
-                        -Dsonar.token=${SONARQUBE_TOKEN}
-                    '''
+                    sh 'mvn sonar:sonar'
+                }
+            }
+        }
+
+        stage('Quality Gate') {
+            steps {
+                echo '⏳ Waiting for SonarQube Quality Gate...'
+                timeout(time: 5, unit: 'MINUTES') {
+                    waitForQualityGate abortPipeline: false
                 }
             }
         }
@@ -78,12 +75,19 @@ pipeline {
             }
         }
 
-        // stage('Deploy to Nexus') {
-        //     steps {
-        //         echo '📤 Deploying artifacts to Nexus...'
-        //         sh 'mvn deploy -DskipTests -Djacoco.skip=true -s maven-settings.xml'
-        //     }
-        // }
+        stage('Deploy to Nexus') {
+            steps {
+                echo '📤 Deploying artifacts to Nexus...'
+                script {
+                    sh """
+                        mvn deploy -DskipTests \
+                          -DaltDeploymentRepository=nexus::default::http://192.168.33.10:8081/repository/maven-snapshots/ \
+                          -Dmaven.deploy.username=\${NEXUS_CREDS_USR} \
+                          -Dmaven.deploy.password=\${NEXUS_CREDS_PSW}
+                    """
+                }
+            }
+        }
 
         stage('Docker Build') {
             steps {
@@ -99,7 +103,7 @@ pipeline {
             steps {
                 echo '🚀 Pushing Image to DockerHub...'
                 script {
-                    sh "echo \$DOCKER_CREDS_PSW | docker login -u \$DOCKER_CREDS_USR --password-stdin"
+                    sh "echo \${DOCKER_CREDS_PSW} | docker login -u \${DOCKER_CREDS_USR} --password-stdin"
                     sh "docker push ${DOCKER_IMAGE}:${BUILD_NUMBER}"
                     sh "docker push ${DOCKER_IMAGE}:latest"
                 }
@@ -116,11 +120,14 @@ pipeline {
 
     post {
         success {
-            echo '✅ Pipeline successful! Artifacts deployed to Nexus, Docker image pushed, and SonarQube analysis completed.'
+            echo '✅ Pipeline successful! All stages completed.'
             archiveArtifacts artifacts: 'target/*.jar', fingerprint: true, allowEmptyArchive: true
         }
         failure {
             echo '❌ Pipeline failed! Check logs.'
+        }
+        always {
+            echo '🏁 Pipeline execution completed.'
         }
     }
 }
