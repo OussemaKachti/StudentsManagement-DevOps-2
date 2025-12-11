@@ -7,6 +7,8 @@ pipeline {
         NEXUS_CREDS = credentials('nexus-credentials')
         NEXUS_USER = "${NEXUS_CREDS_USR}"
         NEXUS_PASS = "${NEXUS_CREDS_PSW}"
+            SONARQUBE_TOKEN = credentials('sonarqube-token')
+
     }
 
     triggers {
@@ -53,20 +55,21 @@ pipeline {
         }
 
         
+    
+
         stage('SonarQube Analysis') {
-            steps {
-                echo '🔍 Running SonarQube Code Quality Analysis...'
-                withSonarQubeEnv('sonarqube') {   // MUST match Jenkins configuration name
-                    sh '''
-                        mvn sonar:sonar \
-                        -Dsonar.projectKey=students-management \
-                        -Dsonar.host.url=http://192.168.33.10:9000 \
-                        -Dsonar.login=admin \
-                        -Dsonar.password=A1993b1998c2002_
-                    '''
-                }
-            }
+    steps {
+        echo '🔍 Running SonarQube Code Quality Analysis...'
+        withSonarQubeEnv('sonar-server') {
+            sh """
+                mvn verify sonar:sonar \
+                -Dsonar.projectKey=student-management \
+                -Dsonar.host.url=http://192.168.33.10:9000 \
+                -Dsonar.login=${SONARQUBE_TOKEN}
+            """
         }
+    }
+}
 
         stage('Package') {
             steps {
