@@ -71,18 +71,26 @@
     <build>
     <plugins>
             <plugin>
-                <groupId>org.springframework.boot</groupId>
-                <artifactId>spring-boot-maven-plugin</artifactId>
-                <configuration>
-                        <mainClass>tn.esprit.studentmanagement.StudentManagementApplication</mainClass>
-                    <excludes>
-                        <exclude>
-                            <groupId>org.projectlombok</groupId>
-                            <artifactId>lombok</artifactId>
-                        </exclude>
-                    </excludes>
-                </configuration>
-            </plugin>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-maven-plugin</artifactId>
+    <configuration>
+        <mainClass>tn.esprit.studentmanagement.StudentManagementApplication</mainClass>
+        <excludes>
+            <exclude>
+                <groupId>org.projectlombok</groupId>
+                <artifactId>lombok</artifactId>
+            </exclude>
+        </excludes>
+    </configuration>
+    <executions>
+        <execution>
+            <goals>
+                <goal>repackage</goal> <!-- THIS IS WHAT WAS MISSING -->
+            </goals>
+        </execution>
+    </executions>
+</plugin>
+
 
             <plugin>
                 <groupId>org.jacoco</groupId>

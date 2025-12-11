@@ -87,6 +87,32 @@ pipeline {
             }
         }
 
+        stage('6. Déploiement Kubernetes') {
+            steps {
+                echo '☸️ Déploiement sur Kubernetes...'
+                sh """
+                    # Vérifier la connexion
+                    kubectl get nodes
+                    
+                    # Appliquer les configurations
+                    kubectl apply -f k8s/mysql-pv.yaml
+                    kubectl apply -f k8s/mysql-pvc.yaml
+                    kubectl apply -f k8s/mysql-deployment.yaml
+                    kubectl apply -f k8s/mysql-service.yaml
+                    kubectl apply -f k8s/spring-deployment.yaml
+                    kubectl apply -f k8s/spring-service.yaml
+                    
+                    # Attendre que les pods soient prêts
+                    kubectl wait --for=condition=ready pod -l app=mysql -n ${NAMESPACE} --timeout=120s
+                    kubectl wait --for=condition=ready pod -l app=spring-app -n ${NAMESPACE} --timeout=120s
+                    
+                    # Afficher l'état
+                    kubectl get pods -n ${NAMESPACE}
+                    kubectl get svc -n ${NAMESPACE}
+                """
+            }
+        }
+
         stage('Cleanup') {
             steps {
                 echo '🧹 Cleaning up...'
@@ -98,6 +124,7 @@ pipeline {
     post {
         success {
             echo '✅ Pipeline successful! Artifacts deployed to Nexus and Docker image pushed.'
+            echo "Application déployée dans le namespace: ${NAMESPACE}"
             archiveArtifacts artifacts: 'target/*.jar', fingerprint: true, allowEmptyArchive: true
         }
         failure {
