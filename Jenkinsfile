@@ -58,18 +58,18 @@ pipeline {
     
 
         stage('SonarQube Analysis') {
-    steps {
-        echo '🔍 Running SonarQube Code Quality Analysis...'
-        withSonarQubeEnv('SonarQube') {
-            sh """
-                mvn verify sonar:sonar \
-                -Dsonar.projectKey=student-management \
-                -Dsonar.host.url=http://192.168.33.10:9000 \
-                -Dsonar.login=${SONARQUBE_TOKEN}
-            """
+            steps {
+                echo '🔍 Running SonarQube Code Quality Analysis...'
+                withSonarQubeEnv('SonarQube') {
+                    sh '''
+                        mvn sonar:sonar \
+                        -Dsonar.projectKey=student-management \
+                        -Dsonar.host.url=http://192.168.33.10:9000 \
+                        -Dsonar.token=${SONARQUBE_TOKEN}
+                    '''
+                }
+            }
         }
-    }
-}
 
         stage('Package') {
             steps {
