@@ -52,6 +52,20 @@ pipeline {
             }
         }
 
+        stage('SonarQube Analysis') {
+    steps {
+        echo '🔍 Running SonarQube analysis...'
+        withSonarQubeEnv('SonarQube') {   // doit correspondre au Name que tu as mis dans Jenkins
+            sh '''
+              mvn sonar:sonar \
+              -Dsonar.projectKey=students-management \
+              -Dsonar.projectName=StudentsManagement \
+              -Dsonar.java.binaries=target/classes
+            '''
+        }
+    }
+}
+
         stage('Package') {
             steps {
                 echo '📦 Packaging JAR...'
