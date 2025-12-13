@@ -73,12 +73,12 @@ pipeline {
             }
         }
 
-       stage('Deploy to Nexus') {
-            steps {
-                echo '📤 Deploying artifacts to Nexus...'
-                sh 'mvn deploy -DskipTests -Djacoco.skip=true -s maven-settings.xml'
-            }
-        }
+    //    stage('Deploy to Nexus') {
+    //         steps {
+    //             echo '📤 Deploying artifacts to Nexus...'
+    //             sh 'mvn deploy -DskipTests -Djacoco.skip=true -s maven-settings.xml'
+    //         }
+    //     }
 
         stage('Docker Build') {
             steps {
