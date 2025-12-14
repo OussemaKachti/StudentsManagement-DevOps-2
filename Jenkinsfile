@@ -82,45 +82,48 @@ pipeline {
             steps {
                 echo '☸️ Deploying to Kubernetes cluster...'
                 script {
-                    // Check if namespace exists
+                    // Verify namespace exists
                     sh """
                         kubectl get namespace ${K8S_NAMESPACE} || kubectl create namespace ${K8S_NAMESPACE}
                     """
                     
-                    // Deploy MySQL components
+                    // Deploy MySQL (check if files exist first)
                     sh """
-                        echo '📊 Deploying MySQL components...'
-                        kubectl apply -f k8s/mysql-pv.yaml
-                        kubectl apply -f k8s/mysql-pvc.yaml
+                        echo '📊 Deploying MySQL...'
+                        if [ -f k8s/mysql-pv.yaml ]; then
+                            kubectl apply -f k8s/mysql-pv.yaml
+                        fi
+                        if [ -f k8s/mysql-pvc.yaml ]; then
+                            kubectl apply -f k8s/mysql-pvc.yaml
+                        fi
                         kubectl apply -f k8s/mysql-deployment.yaml
                         kubectl apply -f k8s/mysql-service.yaml
                     """
                     
-                    // Wait for MySQL to be ready
+                    // Wait for MySQL
                     sh """
                         echo '⏳ Waiting for MySQL to be ready...'
                         kubectl wait --for=condition=ready pod -l app=mysql -n ${K8S_NAMESPACE} --timeout=300s || true
                     """
                     
-                    // Deploy Spring Boot Application
+                    // Deploy Spring Boot
                     sh """
                         echo '🚀 Deploying Spring Boot Application...'
-                        kubectl apply -f k8s/spring-configmap.yaml -n ${K8S_NAMESPACE}
-                        kubectl apply -f k8s/spring-secret.yaml -n ${K8S_NAMESPACE}
                         kubectl apply -f k8s/spring-deployment.yaml -n ${K8S_NAMESPACE}
                         kubectl apply -f k8s/spring-service.yaml -n ${K8S_NAMESPACE}
                     """
                     
-                    // Update image to use the latest build
+                    // Update to latest image
                     sh """
+                        echo '🔄 Updating to build ${BUILD_NUMBER}...'
                         kubectl set image deployment/students-management \
                             students-management=${DOCKER_IMAGE}:${BUILD_NUMBER} \
                             -n ${K8S_NAMESPACE}
                     """
                     
-                    // Wait for rollout to complete
+                    // Wait for rollout
                     sh """
-                        echo '⏳ Waiting for deployment to complete...'
+                        echo '⏳ Waiting for rollout to complete...'
                         kubectl rollout status deployment/students-management -n ${K8S_NAMESPACE} --timeout=5m
                     """
                 }
@@ -131,16 +134,21 @@ pipeline {
             steps {
                 echo '🔍 Verifying deployment...'
                 script {
-                    // Display deployment info
                     sh """
-                        echo '✅ Deployment Information:'
                         echo ''
-                        echo '📋 Pods:'
-                        kubectl get pods -n ${K8S_NAMESPACE}
+                        echo '═══════════════════════════════════════════════════'
+                        echo '✅ Deployment Information:'
+                        echo '═══════════════════════════════════════════════════'
+                        echo ''
+                        echo '📋 Pods Status:'
+                        kubectl get pods -n ${K8S_NAMESPACE} -o wide
                         echo ''
                         echo '🔗 Services:'
                         kubectl get svc -n ${K8S_NAMESPACE}
                         echo ''
+                        echo '📦 Deployments:'
+                        kubectl get deployments -n ${K8S_NAMESPACE}
+                        echo '═══════════════════════════════════════════════════'
                     """
                     
                     // Get service URL
@@ -151,11 +159,13 @@ pipeline {
                     
                     echo "🌐 Application URL: ${serviceUrl}"
                     
-                    // Test application endpoint
+                    // Test application
                     sh """
-                        echo '🏥 Testing application endpoints...'
-                        sleep 15
-                        curl -f ${serviceUrl}/students/getAllStudents || echo '⚠️  Warning: Application not ready yet'
+                        echo ''
+                        echo '🏥 Testing application endpoint...'
+                        sleep 10
+                        curl -s ${serviceUrl}/students/getAllStudents | head -20 || echo '⚠️  Endpoint not ready yet'
+                        echo ''
                     """
                 }
             }
@@ -163,7 +173,7 @@ pipeline {
 
         stage('Cleanup') {
             steps {
-                echo '🧹 Cleaning up...'
+                echo '🧹 Cleaning up Docker credentials...'
                 sh 'docker logout'
             }
         }
@@ -171,34 +181,43 @@ pipeline {
 
     post {
         success {
-            echo '✅ Pipeline successful!'
             echo ''
             echo '═══════════════════════════════════════════════════'
-            echo '📦 Docker Image: ${DOCKER_IMAGE}:${BUILD_NUMBER}'
-            echo '☸️  Kubernetes Namespace: ${K8S_NAMESPACE}'
+            echo '✅ PIPELINE SUCCESSFUL!'
+            echo '═══════════════════════════════════════════════════'
+            echo ''
             script {
                 def serviceUrl = sh(
                     script: "minikube service students-service -n ${K8S_NAMESPACE} --url 2>/dev/null || echo 'http://192.168.49.2:30089'",
                     returnStdout: true
                 ).trim()
-                echo "🌐 Application URL: ${serviceUrl}"
-                echo ''
-                echo '📌 Test your application:'
+                
+                echo "📦 Docker Image: ${DOCKER_IMAGE}:${BUILD_NUMBER}"
+                echo "☸️  Namespace: ${K8S_NAMESPACE}"
+                echo "🌐 Application: ${serviceUrl}"
+                echo ""
+                echo "📌 Quick Tests:"
                 echo "   curl ${serviceUrl}/students/getAllStudents"
+                echo "   curl -X POST ${serviceUrl}/students/createStudent -H 'Content-Type: application/json' -d '{\"firstName\":\"Test\",\"lastName\":\"User\",\"email\":\"test@esprit.tn\"}'"
             }
             echo '═══════════════════════════════════════════════════'
             archiveArtifacts artifacts: 'target/*.jar', fingerprint: true, allowEmptyArchive: true
         }
         failure {
-            echo '❌ Pipeline failed! Check logs.'
+            echo '❌ Pipeline failed!'
             script {
                 sh """
                     echo ''
-                    echo '📋 Kubernetes Status:'
-                    kubectl get pods -n ${K8S_NAMESPACE} || true
+                    echo '📋 Debugging Information:'
                     echo ''
-                    echo '📋 Recent Application Logs:'
-                    kubectl logs -n ${K8S_NAMESPACE} -l app=students-management --tail=50 || true
+                    echo 'Pods Status:'
+                    kubectl get pods -n ${K8S_NAMESPACE} -o wide || true
+                    echo ''
+                    echo 'Recent Logs:'
+                    kubectl logs -n ${K8S_NAMESPACE} -l app=students-management --tail=30 || true
+                    echo ''
+                    echo 'Events:'
+                    kubectl get events -n ${K8S_NAMESPACE} --sort-by='.lastTimestamp' | tail -10 || true
                 """
             }
         }
