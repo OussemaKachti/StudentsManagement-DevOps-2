@@ -78,58 +78,65 @@ pipeline {
             }
         }
 
-        stage('Deploy to Kubernetes') {
-            steps {
-                echo '☸️ Deploying to Kubernetes cluster...'
-                script {
-                    // Verify namespace exists
-                    sh """
-                        kubectl get namespace ${K8S_NAMESPACE} || kubectl create namespace ${K8S_NAMESPACE}
-                    """
-                    
-                    // Deploy MySQL (check if files exist first)
-                    sh """
-                        echo '📊 Deploying MySQL...'
-                        if [ -f k8s/mysql-pv.yaml ]; then
-                            kubectl apply -f k8s/mysql-pv.yaml
-                        fi
-                        if [ -f k8s/mysql-pvc.yaml ]; then
-                            kubectl apply -f k8s/mysql-pvc.yaml
-                        fi
-                        kubectl apply -f k8s/mysql-deployment.yaml
-                        kubectl apply -f k8s/mysql-service.yaml
-                    """
-                    
-                    // Wait for MySQL
-                    sh """
-                        echo '⏳ Waiting for MySQL to be ready...'
-                        kubectl wait --for=condition=ready pod -l app=mysql -n ${K8S_NAMESPACE} --timeout=300s || true
-                    """
-                    
-                    // Deploy Spring Boot
-                    sh """
-                        echo '🚀 Deploying Spring Boot Application...'
-                        kubectl apply -f k8s/spring-deployment.yaml -n ${K8S_NAMESPACE}
+       stage('Deploy to Kubernetes') {
+    steps {
+        echo '☸️ Deploying to Kubernetes cluster...'
+        script {
+            // Verify namespace exists
+            sh """
+                kubectl get namespace ${K8S_NAMESPACE} || kubectl create namespace ${K8S_NAMESPACE}
+            """
+            
+            // Deploy MySQL (check if files exist first)
+            sh """
+                echo '📊 Deploying MySQL...'
+                if [ -f k8s/mysql-pv.yaml ]; then
+                    kubectl apply -f k8s/mysql-pv.yaml
+                fi
+                if [ -f k8s/mysql-pvc.yaml ]; then
+                    kubectl apply -f k8s/mysql-pvc.yaml
+                fi
+                kubectl apply -f k8s/mysql-deployment.yaml
+                kubectl apply -f k8s/mysql-service.yaml
+            """
+            
+            // Wait for MySQL
+            sh """
+                echo '⏳ Waiting for MySQL to be ready...'
+                kubectl wait --for=condition=ready pod -l app=mysql -n ${K8S_NAMESPACE} --timeout=300s || true
+            """
+            
+            // Deploy Spring Boot
+            sh """
+                echo '🚀 Deploying Spring Boot Application...'
+                kubectl apply -f k8s/spring-deployment.yaml -n ${K8S_NAMESPACE}
+                
+                # Only apply spring-service if students-service doesn't exist
+                if ! kubectl get svc students-service -n ${K8S_NAMESPACE} &> /dev/null; then
+                    if [ -f k8s/spring-service.yaml ]; then
                         kubectl apply -f k8s/spring-service.yaml -n ${K8S_NAMESPACE}
-                    """
-                    
-                    // Update to latest image
-                    sh """
-                        echo '🔄 Updating to build ${BUILD_NUMBER}...'
-                        kubectl set image deployment/students-management \
-                            students-management=${DOCKER_IMAGE}:${BUILD_NUMBER} \
-                            -n ${K8S_NAMESPACE}
-                    """
-                    
-                    // Wait for rollout
-                    sh """
-                        echo '⏳ Waiting for rollout to complete...'
-                        kubectl rollout status deployment/students-management -n ${K8S_NAMESPACE} --timeout=5m
-                    """
-                }
-            }
+                    fi
+                else
+                    echo '✅ Service students-service already exists, skipping spring-service'
+                fi
+            """
+            
+            // Update to latest image
+            sh """
+                echo '🔄 Updating to build ${BUILD_NUMBER}...'
+                kubectl set image deployment/students-management \
+                    students-management=${DOCKER_IMAGE}:${BUILD_NUMBER} \
+                    -n ${K8S_NAMESPACE}
+            """
+            
+            // Wait for rollout
+            sh """
+                echo '⏳ Waiting for rollout to complete...'
+                kubectl rollout status deployment/students-management -n ${K8S_NAMESPACE} --timeout=5m
+            """
         }
-
+    }
+}
         stage('Verify Deployment') {
             steps {
                 echo '🔍 Verifying deployment...'
