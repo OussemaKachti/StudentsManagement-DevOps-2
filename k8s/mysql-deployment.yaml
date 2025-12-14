@@ -16,13 +16,15 @@ spec:
       containers:
         - name: mysql
           image: mysql:8.0
+          args:
+            - "--default-authentication-plugin=mysql_native_password"
           ports:
             - containerPort: 3306
           env:
             - name: MYSQL_ROOT_PASSWORD
               value: "root"
             - name: MYSQL_DATABASE
-              value: devopsDB
+              value: "StudentsManagement"
           volumeMounts:
             - name: mysql-storage
               mountPath: /var/lib/mysql

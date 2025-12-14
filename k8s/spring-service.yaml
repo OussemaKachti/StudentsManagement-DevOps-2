@@ -8,6 +8,6 @@ spec:
   selector:
     app: students-management
   ports:
-    - port: 8080
-      targetPort: 8080
-      nodePort: 30080
+  - port: 8089        # ✅ CORRECT
+    targetPort: 8089  # ✅ CORRECT
+    nodePort: 30089   # ✅ CORRECT
