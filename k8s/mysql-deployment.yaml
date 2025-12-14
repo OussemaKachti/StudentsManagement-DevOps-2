@@ -2,6 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: mysql
+  namespace: devops
 spec:
   replicas: 1
   selector:
@@ -19,7 +20,7 @@ spec:
             - containerPort: 3306
           env:
             - name: MYSQL_ROOT_PASSWORD
-              value: ""
+              value: "root"
             - name: MYSQL_DATABASE
               value: devopsDB
           volumeMounts:

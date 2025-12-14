@@ -1,29 +1,45 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: spring-app
+  name: students-management
+  namespace: devops
 spec:
   replicas: 2
   selector:
     matchLabels:
-      app: spring-app
+      app: students-management
   template:
     metadata:
       labels:
-        app: spring-app
+        app: students-management
     spec:
       containers:
-        - name: spring-app
+        - name: students-management
           image: oussema17/students-management:latest
-
           ports:
             - containerPort: 8080
+          livenessProbe:
+            tcpSocket:
+              port: 8080
+            initialDelaySeconds: 60
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            tcpSocket:
+              port: 8080
+            initialDelaySeconds: 40
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
           env:
             - name: SPRING_DATASOURCE_URL
-              value: jdbc:mysql://mysql:3306/studentsdb
+              value: "jdbc:mysql://mysql:3306/devopsDB?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true"
             - name: SPRING_DATASOURCE_USERNAME
-              value: root
+              value: "root"
             - name: SPRING_DATASOURCE_PASSWORD
-              value: root
+              value: "root"
             - name: SPRING_JPA_HIBERNATE_DDL_AUTO
-              value: update
+              value: "update"
+            - name: SERVER_PORT
+              value: "8080"
