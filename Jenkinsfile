@@ -5,6 +5,9 @@ pipeline {
         DOCKER_IMAGE = 'oussema17/students-management'
         DOCKER_CREDS = credentials('dockerhub-credentials')
         K8S_NAMESPACE = 'devops'
+         NEXUS_CREDS = credentials('nexus-credentials')
+        NEXUS_USER = "${NEXUS_CREDS_USR}"
+        NEXUS_PASS = "${NEXUS_CREDS_PSW}"
     }
 
     triggers {
@@ -54,6 +57,12 @@ pipeline {
             steps {
                 echo '📦 Packaging JAR...'
                 sh 'mvn package -DskipTests'
+            }
+        }
+        stage('Deploy to Nexus') {
+            steps {
+                echo '📤 Deploying artifacts to Nexus...'
+                sh 'mvn deploy -DskipTests -s maven-settings.xml'
             }
         }
 
@@ -201,6 +210,7 @@ pipeline {
                 ).trim()
                 
                 echo "📦 Docker Image: ${DOCKER_IMAGE}:${BUILD_NUMBER}"
+                echo '✅ Pipeline successful! Artifacts deployed to Nexus and Docker image pushed.'
                 echo "☸️  Namespace: ${K8S_NAMESPACE}"
                 echo "🌐 Application: ${serviceUrl}"
                 echo ""
